@@ -18,9 +18,9 @@ class OSSResponse {
     print("resp:${this.resp_txt}");
     this.resp_root = XmlDocument.parse(this.resp_txt);
   }
-  String resp_txt;
-  XmlDocument resp_root;
-  Map<String, String> response_dict;
+  late String resp_txt;
+  late XmlDocument resp_root;
+  late Map<String, String> response_dict;
   void raise_exception() {
     final rootTagName = this.resp_root.rootElement.name;
     if ('$rootTagName' == "Error") {
@@ -38,7 +38,7 @@ class OSSResponse {
     }
   }
 
-  String getKey(String key) {
+  String? getKey(String key) {
     return response_dict.containsKey(key) ? response_dict[key] : '';
   }
 }
@@ -51,11 +51,11 @@ class HttpRequest {
     this.param = param;
     this.headers = headers;
   }
-  String url;
-  String method;
-  Map param;
-  Map headers;
-  List<int> _fileData;
+  late String url;
+  late String method;
+  late Map param;
+  late Map headers;
+  late List<int> _fileData;
 
   set fileData(List<int> bytes) {
     this._fileData = bytes;
@@ -116,17 +116,17 @@ class Client {
     this.endpoint = endpointDomain;
     this.tokenGetter = getToken;
   }
-  String stsRequestUrl;
-  String endpoint;
-  GetToken tokenGetter;
+  late String stsRequestUrl;
+  late String endpoint;
+  late GetToken tokenGetter;
 
   Client.static(String accessKey, String accessSecret, String region) {
-    this._auth = Auth(accessKey, accessSecret, null);
+    this._auth = Auth(accessKey, accessSecret, '');
     this.endpoint = "oss-${region}.aliyuncs.com";
   }
 
-  Auth _auth;
-  String _expire;
+  late Auth _auth;
+  late String _expire;
 
   bool checkExpire(String expire) {
     if (expire == null) {
@@ -267,9 +267,9 @@ class Auth {
     this.secureToken = secureToken;
   }
 
-  String accessKey;
-  String accessSecret;
-  String secureToken;
+  late String accessKey;
+  late String accessSecret;
+  late String secureToken;
 
   static const _subresource_key_set = [
     'response-content-type',

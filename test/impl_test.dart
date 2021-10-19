@@ -46,7 +46,7 @@ void main() {
     });
 
     test('Client-checkExpire', () {
-      final client = Client('', '', (url) async {});
+      final client = Client('', '', (url) async {return Future.value(); });
       final yes = client.checkExpire('2019-06-23T00:53:26Z');
       print('rs:${yes}');
       expect(true, equals(yes));
@@ -117,7 +117,7 @@ void main() {
       expect(true, equals(true));
     });
     test('HttpRequest', () async {
-      final req = new HttpRequest('http://aaa.com', 'GET', null, null);
+      final req = new HttpRequest('http://aaa.com', 'GET', {}, {});
       print(req.asCurl());
     });
 
@@ -143,7 +143,7 @@ void main() {
       final etags = <String>[];
       for (var i = 0; i < 3; i++) {
         final upReq = client.uploadPart(
-            'codiario', 'multi.txt', uploadId, i + 1, data[i]);
+            'codiario', 'multi.txt', uploadId!, i + 1, data[i]);
         final upRequest = new console.Request(upReq.method, upReq.Url,
             headers:
                 console.Headers((upReq.headers ?? {}).cast<String, dynamic>()),
@@ -155,7 +155,7 @@ void main() {
       }
 
       final cplReq =
-          client.completePartUpload('codiario', 'multi.txt', uploadId, etags);
+          client.completePartUpload('codiario', 'multi.txt', uploadId!, etags);
       final cplRequest = new console.Request(cplReq.method, cplReq.Url,
           headers:
               console.Headers((cplReq.headers ?? {}).cast<String, dynamic>()),
