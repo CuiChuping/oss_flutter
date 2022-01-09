@@ -53,8 +53,8 @@ class HttpRequest {
   }
   late String url;
   late String method;
-  late Map param;
-  late Map headers;
+  Map param = {};
+  Map headers = {};
   late List<int> _fileData;
 
   set fileData(List<int> bytes) {
@@ -66,7 +66,7 @@ class HttpRequest {
   String get Url {
     var url_params = [];
     var url_base = this.url;
-    if ((this.param ?? {}).isNotEmpty) {
+    if (this.param.isNotEmpty) {
       this.param.forEach((k, v) {
         url_params.add("${k}=${v}");
       });
@@ -81,7 +81,7 @@ class HttpRequest {
   /// return string of curl command, you can test it in console
   String asCurl({file_path: null}) {
     var cmd_base = 'curl ';
-    if ((this.headers ?? {}).isNotEmpty) {
+    if (this.headers.isNotEmpty) {
       this.headers.forEach((k, v) {
         cmd_base = "${cmd_base} -H \"${k}:${v}\"";
       });
@@ -95,10 +95,7 @@ class HttpRequest {
     if (this.method == 'DELETE') {
       cmd_base = "${cmd_base} -X DELETE";
     }
-    if (this._fileData != null) {
-      cmd_base = "${cmd_base} \"${file_path}\"";
-    }
-    cmd_base = '${cmd_base} ${this.Url}';
+    cmd_base = "${cmd_base} \"${file_path}\" ${this.Url}";
     return cmd_base;
   }
 }
@@ -125,10 +122,10 @@ class Client {
     this.endpoint = "oss-${region}.aliyuncs.com";
   }
 
-  late Auth _auth;
-  late String _expire;
+  late Auth? _auth;
+  late String? _expire;
 
-  bool checkExpire(String expire) {
+  bool checkExpire(String? expire) {
     if (expire == null) {
       return false;
     }
@@ -149,8 +146,7 @@ class Client {
     } else {
       final resp = await this.tokenGetter(this.stsRequestUrl);
       final respMap = jsonDecode(resp);
-      this._auth = Auth(respMap['AccessKeyId'], respMap['AccessKeySecret'],
-          respMap['SecurityToken']);
+      this._auth = Auth(respMap['AccessKeyId'], respMap['AccessKeySecret'], respMap['SecurityToken']);
       this._expire = respMap['Expiration'];
       return this;
     }
@@ -164,13 +160,8 @@ class Client {
   }
 
   /// List Buckets
-  HttpRequest list_buckets(
-      {prefix: '', marker: '', max_keys: 100, params: null}) {
-    final listParam = {
-      'prefix': prefix,
-      'marker': marker,
-      'max-keys': '${max_keys}'
-    };
+  HttpRequest list_buckets({prefix: '', marker: '', max_keys: 100, params: null}) {
+    final listParam = {'prefix': prefix, 'marker': marker, 'max-keys': '${max_keys}'};
     if ((params ?? {}).isNotEmpty) {
       if (params.containsKey('tag-key')) {
         listParam['tag-key'] = params['tag-key'];
@@ -181,7 +172,7 @@ class Client {
     }
     final url = "http://${this.endpoint}";
     HttpRequest req = new HttpRequest(url, 'GET', listParam, {});
-    this._auth.signRequest(req, '', '');
+    this._auth!.signRequest(req, '', '');
     return req;
   }
 
@@ -191,13 +182,10 @@ class Client {
   /// @param fileKey type:String upload filename
   /// @return type:HttpRequest
   HttpRequest putObject(List<int> fileData, String bucketName, String fileKey) {
-    final headers = {
-      'content-md5': md5File(fileData),
-      'content-type': contentTypeByFilename(fileKey)
-    };
+    final headers = {'content-md5': md5File(fileData), 'content-type': contentTypeByFilename(fileKey)};
     final url = "https://${bucketName}.${this.endpoint}/${fileKey}";
     HttpRequest req = new HttpRequest(url, 'PUT', {}, headers);
-    this._auth.signRequest(req, bucketName, fileKey);
+    this._auth!.signRequest(req, bucketName, fileKey);
     req.fileData = fileData;
     return req;
   }
@@ -209,7 +197,7 @@ class Client {
   HttpRequest deleteObject(String bucketName, String fileKey) {
     final url = "https://${bucketName}.${this.endpoint}/${fileKey}";
     final req = HttpRequest(url, 'DELETE', {}, {});
-    this._auth.signRequest(req, bucketName, fileKey);
+    this._auth!.signRequest(req, bucketName, fileKey);
     return req;
   }
 
@@ -220,22 +208,20 @@ class Client {
     final url = "https://${bucketName}.${this.endpoint}/${fileKey}?uploads";
     final headers = {'content-type': "application/xml"};
     HttpRequest req = new HttpRequest(url, 'POST', {}, headers);
-    this._auth.signRequest(req, bucketName, fileKey);
+    this._auth!.signRequest(req, bucketName, fileKey);
     return req;
   }
 
-  HttpRequest uploadPart(String bucketName, String fileKey, String uploadId,
-      int partNumber, List<int> data) {
+  HttpRequest uploadPart(String bucketName, String fileKey, String uploadId, int partNumber, List<int> data) {
     final url = "https://${bucketName}.${this.endpoint}/${fileKey}";
     final params = {"partNumber": '$partNumber', "uploadId": uploadId};
     HttpRequest req = new HttpRequest(url, 'PUT', params, {});
     req.fileData = data;
-    this._auth.signRequest(req, bucketName, fileKey);
+    this._auth!.signRequest(req, bucketName, fileKey);
     return req;
   }
 
-  HttpRequest completePartUpload(
-      String bucketName, String fileKey, String uploadId, List<String> etags) {
+  HttpRequest completePartUpload(String bucketName, String fileKey, String uploadId, List<String> etags) {
     final url = "https://${bucketName}.${this.endpoint}/${fileKey}";
     final params = {"uploadId": uploadId};
     final builder = XmlBuilder();
@@ -255,7 +241,7 @@ class Client {
     final xml_request = builder.buildDocument().toXmlString();
     print("XML Request:$xml_request");
     req.fileData = utf8.encode(xml_request);
-    this._auth.signRequest(req, bucketName, fileKey);
+    this._auth!.signRequest(req, bucketName, fileKey);
     return req;
   }
 }
@@ -320,9 +306,7 @@ class Auth {
 
   void signRequest(HttpRequest req, String bucket, String key) {
     req.headers['date'] = httpDateNow();
-    if (this.secureToken != null) {
-      req.headers['x-oss-security-token'] = this.secureToken;
-    }
+    req.headers['x-oss-security-token'] = this.secureToken;
     final signature = this.make_signature(req, bucket, key);
     req.headers['authorization'] = "OSS ${this.accessKey}:${signature}";
   }
@@ -334,7 +318,7 @@ class Auth {
 
   String get_string_to_sign(HttpRequest req, String bucket, String key) {
     final resource_string = this.get_resource_string(req, bucket, key);
-    final headers_string = this.get_headers_string(req) ?? '';
+    final headers_string = this.get_headers_string(req);
     final contentMd5 = req.headers['content-md5'] ?? '';
     final contentType = req.headers['content-type'] ?? '';
     final date = req.headers['date'] ?? '';
@@ -342,7 +326,7 @@ class Auth {
   }
 
   String get_resource_string(HttpRequest req, String bucket, String key) {
-    if ((bucket ?? '').isEmpty) {
+    if (bucket.isEmpty) {
       return "/";
     } else {
       final substring = this.get_subresource_string(req.param);
